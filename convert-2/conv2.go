@@ -10,37 +10,33 @@ func main() {
 	fmt.Println("===КОНВЕРТЕР ВАЛЮТ===\n")
 
 	for {
-		fromCurrency, err := getCurrency("Введите исходную валюту (USD, EUR, RUB): ")
-		if err != nil {
-			fmt.Println("Ошибка:", err)
+		fromCurrency := inputAndValidateCurrency("исходную")
+		if fromCurrency == "" {
 			continue
 		}
 
-		amount, err := getAmount()
-		if err != nil {
-			fmt.Println("Ошибка:", err)
+		amount := inputAndValidateAmount()
+		if amount == 0 {
 			continue
 		}
 
-		toCurrency, err := getCurrency("Введите целевую валюту (USD, EUR, RUB): ")
-		if err != nil {
-			fmt.Println("Ошибка:", err)
+		toCurrency := inputAndValidateCurrency("целевую")
+		if toCurrency == "" {
 			continue
 		}
 
 		result, err := calculate(fromCurrency, toCurrency, amount)
 		if err != nil {
-			fmt.Println("Ошибка:", err)
+			fmt.Printf("Ошибка: %v\n\n", err)
 			continue
 		}
 
-		fmt.Printf("Результат: %.2f %s -> %.2f %s\n\n", amount, fromCurrency, result, toCurrency)
+		fmt.Printf("\nРезультат: %.2f %s -> %.2f %s\n\n", amount, fromCurrency, result, toCurrency)
 
-		fmt.Print("Хотите выполнить еще одну конвертацию? (да/нет): ")
+		fmt.Print("Продолжить? (да/нет): ")
 		var answer string
 		fmt.Scan(&answer)
-		answer = strings.ToLower(answer)
-		if answer != "да" && answer != "yes" && answer != "y" {
+		if strings.ToLower(answer) != "да" {
 			fmt.Println("До свидания!")
 			break
 		}
@@ -48,32 +44,40 @@ func main() {
 	}
 }
 
-func getCurrency(prompt string) (string, error) {
-	fmt.Print(prompt)
-	var currency string
-	fmt.Scan(&currency)
-	currency = strings.ToUpper(strings.TrimSpace(currency))
+func inputAndValidateCurrency(currencyType string) string {
+	for {
+		fmt.Printf("Введите %s валюту (доступны: USD, EUR, RUB): ", currencyType)
+		var currency string
+		fmt.Scan(&currency)
+		currency = strings.ToUpper(strings.TrimSpace(currency))
 
-	if currency == "USD" || currency == "EUR" || currency == "RUB" {
-		return currency, nil
+		if currency == "USD" || currency == "EUR" || currency == "RUB" {
+			return currency
+		}
+		fmt.Println("Ошибка: валюта должна быть USD, EUR или RUB. Попробуйте снова.")
 	}
-	return "", errors.New("валюта должна быть USD, EUR или RUB")
 }
 
-func getAmount() (float64, error) {
-	fmt.Print("Введите сумму для конвертации: ")
-	var amount float64
-	_, err := fmt.Scan(&amount)
+func inputAndValidateAmount() float64 {
+	for {
+		fmt.Print("Введите сумму для конвертации (число > 0): ")
+		var amount float64
+		_, err := fmt.Scan(&amount)
 
-	if err != nil {
-		return 0, errors.New("введите корректное число")
+		if err != nil {
+			fmt.Println("Ошибка: введите корректное число. Попробуйте снова.")
+			var discard string
+			fmt.Scan(&discard)
+			continue
+		}
+
+		if amount <= 0 {
+			fmt.Println("Ошибка: сумма должна быть больше нуля. Попробуйте снова.")
+			continue
+		}
+
+		return amount
 	}
-
-	if amount <= 0 {
-		return 0, errors.New("сумма должна быть больше нуля")
-	}
-
-	return amount, nil
 }
 
 func calculate(from, to string, amount float64) (float64, error) {
@@ -103,7 +107,7 @@ func calculate(from, to string, amount float64) (float64, error) {
 	case "EUR":
 		return rubAmount / eurToRub, nil
 	case "RUB":
-		return rubAmount, nil
+	 return rubAmount, nil
 	default:
 		return 0, errors.New("неизвестная целевая валюта")
 	}
