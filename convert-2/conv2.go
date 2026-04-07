@@ -3,95 +3,112 @@ package main
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 func main() {
-
 	fmt.Println("===КОНВЕРТЕР ВАЛЮТ===\n")
 
-	banner := help()
+	for {
+		fromCurrency := inputAndValidateCurrency("исходную")
+		if fromCurrency == "" {
+			continue
+		}
 
-	fmt.Println(banner)
-    
-    var choice int
-	fmt.Scan(&choice)
+		amount := inputAndValidateAmount()
+		if amount == 0 {
+			continue
+		}
 
-	amount, err := userInput(choice)
+		toCurrency := inputAndValidateCurrency("целевую")
+		if toCurrency == "" {
+			continue
+		}
 
-	if err != nil {
-		fmt.Println("Ошибка:", err)
-		return
+		result, err := calculate(fromCurrency, toCurrency, amount)
+		if err != nil {
+			fmt.Printf("Ошибка: %v\n\n", err)
+			continue
+		}
+
+		fmt.Printf("\nРезультат: %.2f %s -> %.2f %s\n\n", amount, fromCurrency, result, toCurrency)
+
+		fmt.Print("Продолжить? (да/нет): ")
+		var answer string
+		fmt.Scan(&answer)
+		if strings.ToLower(answer) != "да" {
+			fmt.Println("До свидания!")
+			break
+		}
+		fmt.Println()
 	}
-
-	
-	result := calculate(choice, amount)
-	fmt.Printf("Результат конвертации: %.2f\n", result)
 }
 
-func help() (helpList string) {
+func inputAndValidateCurrency(currencyType string) string {
+	for {
+		fmt.Printf("Введите %s валюту (доступны: USD, EUR, RUB): ", currencyType)
+		var currency string
+		fmt.Scan(&currency)
+		currency = strings.ToUpper(strings.TrimSpace(currency))
 
-	helpList = `Выбирите опцию 
-	1. USD -> RUB
-	2. USD -> EUR
-	3. EUR -> USD
-	4. EUR -> RUB
-	5. RUB -> USD
-	6. RUB -> EUR
-	
-Просто укажите цифру:`
-
-
-	return helpList
+		if currency == "USD" || currency == "EUR" || currency == "RUB" {
+			return currency
+		}
+		fmt.Println("Ошибка: валюта должна быть USD, EUR или RUB. Попробуйте снова.")
+	}
 }
 
+func inputAndValidateAmount() float64 {
+	for {
+		fmt.Print("Введите сумму для конвертации (число > 0): ")
+		var amount float64
+		_, err := fmt.Scan(&amount)
 
-func userInput(choice int) (float64, error) {
-	
-	if choice < 1 || choice > 6 {
+		if err != nil {
+			fmt.Println("Ошибка: введите корректное число. Попробуйте снова.")
+			var discard string
+			fmt.Scan(&discard)
+			continue
+		}
 
-		return 0, errors.New("Ошибка ввода: неверный номер опции")
+		if amount <= 0 {
+			fmt.Println("Ошибка: сумма должна быть больше нуля. Попробуйте снова.")
+			continue
+		}
+
+		return amount
 	}
-
-	var amount float64
-	fmt.Print("Введите сумму для конвертации: ")
-	fmt.Scan(&amount)
-
-    
-	if(amount == 0){
-
-		return 0, errors.New("Вы ввели не число")
-	}
-	
-	return amount, nil
-
 }
 
-func calculate(choice int, amount float64)float64{
-
- 	const usdToRub = 78.73
-	const usdToEur = 0.8649
-	const eurToUsd = 1.16
+func calculate(from, to string, amount float64) (float64, error) {
+	const usdToRub = 78.73
 	const eurToRub = 91.0
-	const rubToUsd = 0.012702
-	const rubToEur = 0.10989
 
-	
-	switch choice {
-	case 1:
-		return amount * usdToRub
-	case 2:
-		return amount * usdToEur
-	case 3:
-		return amount * eurToUsd
-	case 4:
-		return amount * eurToRub
-	case 5:
-		return amount * rubToUsd
-	case 6:
-		return amount * rubToEur
-	default:
-		return 0
+	if from == to {
+		return 0, errors.New("исходная и целевая валюта не могут совпадать")
 	}
-  
 
+	var rubAmount float64
+
+	switch from {
+	case "USD":
+		rubAmount = amount * usdToRub
+	case "EUR":
+		rubAmount = amount * eurToRub
+	case "RUB":
+		rubAmount = amount
+	default:
+		return 0, errors.New("неизвестная исходная валюта")
+	}
+
+	switch to {
+	case "USD":
+		return rubAmount / usdToRub, nil
+	case "EUR":
+		return rubAmount / eurToRub, nil
+	case "RUB":
+	 return rubAmount, nil
+	default:
+		return 0, errors.New("неизвестная целевая валюта")
+	}
 }
